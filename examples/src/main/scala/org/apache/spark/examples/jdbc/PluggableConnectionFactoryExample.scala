@@ -29,7 +29,7 @@ object RDS {
 In real life the above would be something like the below but I did not want to introduce a dependency on AWS-RDS:
 
 object RDS extends Logging {
-  lazy val config: Config = ConfigFactory.load(s"application-${System.getProperty("env")}").getConfig("aggregates")
+  lazy val config: Config = ConfigFactory.load(s"typesafe_configfile").getConfig("myconfig")
 
   lazy val clusterId = config.getString("rds.cluster")
 
@@ -44,7 +44,7 @@ object RDS extends Logging {
         .filter(i => i.getDBClusterIdentifier == clusterId && i.getDBInstanceStatus == "available")
         .map(instance => s"${instance.getEndpoint.getAddress}:${instance.getEndpoint.getPort}")
     } else endpoints.drop(1) ++ endpoints.take(1)
-    endpoints.mkString(s"jdbc:postgresql://",",","/koltpweb")
+    endpoints.mkString(s"jdbc:postgresql://",",","/dbname")
   }
 }
 */
