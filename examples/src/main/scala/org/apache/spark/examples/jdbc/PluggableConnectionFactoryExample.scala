@@ -49,7 +49,7 @@ object RDS extends Logging {
 }
 */
 
-class CustomConnectionFactory extends ConnectionFactoryProvider {
+class RDSLoadBalancingConnectionFactory extends ConnectionFactoryProvider {
   import scala.collection.JavaConverters._
   override def createConnectionFactory(options: JDBCOptions): () => Connection = {
     val driverClass: String = options.driverClass
@@ -87,7 +87,7 @@ object PluggableConnectionFactoryExample {
       // this will balance queries across RDS read-only replicas
       .options(Map(
           JDBCOptions.JDBC_CONNECTION_FACTORY_PROVIDER ->
-          "org.apache.spark.examples.jdbc.CustomConnectionFactory",
+          "org.apache.spark.examples.jdbc.RDSLoadBalancingConnectionFactory",
           "readOnly" -> "true" // will enable load balancing on RDS
       ))
   }
