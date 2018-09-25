@@ -40,15 +40,11 @@ import org.apache.spark.sql.util.SchemaUtils
 import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.util.NextIterator
 
-/**
- * Util functions for JDBC tables.
- */
-object JdbcUtils extends Logging {
-  /**
-   * Returns a factory for creating connections to the given JDBC URL.
-   *
-   * @param options - JDBC options that contains url, table and other information.
-   */
+trait ConnectionFactoryProvider {
+  def createConnectionFactory(options: JDBCOptions): () => Connection
+}
+
+object DefaultConnectionFactoryProvider extends ConnectionFactoryProvider {
   def createConnectionFactory(options: JDBCOptions): () => Connection = {
     val driverClass: String = options.driverClass
     () => {
@@ -62,6 +58,20 @@ object JdbcUtils extends Logging {
       }
       driver.connect(options.url, options.asConnectionProperties)
     }
+  }
+}
+
+/**
+ * Util functions for JDBC tables.
+ */
+object JdbcUtils extends Logging {
+  /**
+   * Returns a factory for creating connections to the given JDBC URL.
+   *
+   * @param options - JDBC options that contains url, table and other information.
+   */
+  def createConnectionFactory(options: JDBCOptions): () => Connection = {
+    options.connectionFactoryProvider.createConnectionFactory(options)
   }
 
   /**
