@@ -16,10 +16,10 @@
  */
 package org.apache.spark.examples.jdbc
 
-import java.sql.{Connection, Driver, DriverManager}
+import java.sql.Connection
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.execution.datasources.jdbc.{ConnectionFactoryProvider, DriverRegistry, DriverWrapper, JDBCOptions}
+import org.apache.spark.sql.execution.datasources.jdbc._
 
 object RDS {
   def balancedUrl: String = "TBD"
@@ -50,26 +50,8 @@ object RDS extends Logging {
 */
 
 class RDSLoadBalancingConnectionFactory extends ConnectionFactoryProvider {
-  import scala.collection.JavaConverters._
   override def createConnectionFactory(options: JDBCOptions): () => Connection = {
-    val driverClass: String = options.driverClass
-    () => {
-      DriverRegistry.register(driverClass)
-      val driver: Driver = DriverManager.getDrivers.asScala.collectFirst {
-        case d: DriverWrapper if d.wrapped.getClass.getCanonicalName == driverClass => d
-        case d if d.getClass.getCanonicalName == driverClass => d
-      }.getOrElse {
-        throw new IllegalStateException(
-          s"Did not find registered driver with class $driverClass")
-      }
-      // balance reads using RDS api but writes still need to go to the
-      // writer endpoint specified in JDBCOptions
-      val url = if (options.asProperties.getProperty("readOnly") == "true") {
-        RDS.balancedUrl
-      } else options.url
-      driver.connect(url, options.asConnectionProperties)
-    }
-  }
+    () => LoadDriver(options).connect(RDS.balancedUrl, options.asConnectionProperties)
 }
 
 object PluggableConnectionFactoryExample {

@@ -44,20 +44,25 @@ trait ConnectionFactoryProvider {
   def createConnectionFactory(options: JDBCOptions): () => Connection
 }
 
+object LoadDriver {
+
+  def apply(options: JDBCOptions): Driver = {
+    val driverClass = options.driverClass
+    DriverRegistry.register(driverClass)
+    DriverManager.getDrivers.asScala.collectFirst {
+      case d: DriverWrapper if d.wrapped.getClass.getCanonicalName == driverClass => d
+      case d if d.getClass.getCanonicalName == driverClass => d
+    }.getOrElse {
+      throw new IllegalStateException(
+        s"Did not find registered driver with class $driverClass")
+    }
+  }
+
+}
+
 object DefaultConnectionFactoryProvider extends ConnectionFactoryProvider {
   def createConnectionFactory(options: JDBCOptions): () => Connection = {
-    val driverClass: String = options.driverClass
-    () => {
-      DriverRegistry.register(driverClass)
-      val driver: Driver = DriverManager.getDrivers.asScala.collectFirst {
-        case d: DriverWrapper if d.wrapped.getClass.getCanonicalName == driverClass => d
-        case d if d.getClass.getCanonicalName == driverClass => d
-      }.getOrElse {
-        throw new IllegalStateException(
-          s"Did not find registered driver with class $driverClass")
-      }
-      driver.connect(options.url, options.asConnectionProperties)
-    }
+    () => LoadDriver(options).connect(options.url, options.asConnectionProperties)
   }
 }
 
